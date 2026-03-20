@@ -85,6 +85,7 @@ export interface Intervention {
 
 export interface RiskAnalysisResult {
   baselineRisk: number;
+  typicalRisk: number;
   optimalRisk: number;
   interventions: Intervention[];
   timestamp: number;

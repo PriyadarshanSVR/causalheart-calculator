@@ -414,8 +414,17 @@ export const calculateCausalRisk = (profile: UserProfile): RiskAnalysisResult =>
   const floor = 1.0;
   const optimalRisk = Math.max(floor, residualRisk);
 
+  // Typical person: same sex, BMI 25, never smoked, 150 min/week activity, diet neutral, avg sun 1hr/day
+  const typicalLogOdds = BASE_RISK_INTERCEPT
+    + (activeProfile.sex === 'male' ? SEX_MALE_BETA : 0)
+    + (25 - 22) * BMI_BETA; // BMI 25 → small positive contribution
+  const typicalRisk = parseFloat(
+    Math.min(99, Math.max(0.5, (1 / (1 + Math.exp(-typicalLogOdds))) * 100)).toFixed(1)
+  );
+
   return {
     baselineRisk: parseFloat(baselineRiskPercent.toFixed(1)),
+    typicalRisk,
     optimalRisk: parseFloat(optimalRisk.toFixed(1)),
     interventions,
     timestamp: Date.now(),
