@@ -1,0 +1,5 @@
+{
+  "name": "Heart Health Calculator",
+  "description": "An interactive tool estimating how lifestyle changes may affect your heart health risk, based on large population health studies.",
+  "requestFramePermissions": []
+}
