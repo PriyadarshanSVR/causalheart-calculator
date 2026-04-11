@@ -13,13 +13,14 @@ const LOADING_STEPS = [
 
 // What topics the questionnaire covers — shown on the landing page
 const QUESTION_TOPICS = [
-  { icon: '⚖️', label: 'Body measurements',  detail: 'Height & weight (BMI)' },
+  { icon: '⚖️', label: 'Body measurements',  detail: 'Height, weight & BMI' },
   { icon: '😴', label: 'Sleep',               detail: 'Nightly hours of rest' },
-  { icon: '🚬', label: 'Nicotine use',        detail: 'Smoking or vaping history' },
+  { icon: '🚬', label: 'Smoking',             detail: 'Tobacco & nicotine history' },
   { icon: '🍷', label: 'Alcohol',             detail: 'Drinking frequency' },
-  { icon: '🏃', label: 'Physical activity',   detail: 'Weekly exercise minutes' },
+  { icon: '🏃', label: 'Physical activity',   detail: 'Exercise days & minutes' },
+  { icon: '🛋️', label: 'Sedentary time',      detail: 'TV, screen & driving hours' },
   { icon: '☀️', label: 'Sun exposure',        detail: 'Seasonal outdoor time' },
-  { icon: '🥗', label: 'Diet',                detail: 'Food & drink habits' },
+  { icon: '🥗', label: 'Diet',                detail: '10-item food checklist' },
 ];
 
 function App() {

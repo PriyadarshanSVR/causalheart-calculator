@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, AlcoholFrequency, FoodFrequency, MilkType, SpreadType, SaltUsage } from '../types';
+import { UserProfile, AlcoholFrequency } from '../types';
 import { defaultProfile } from '../services/causalEngine';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 
@@ -103,6 +103,53 @@ const OptionCard = ({
   </button>
 );
 
+// ── CheckCard — Yes/No toggle for diet questions ─────────────────────────────
+
+const CheckCard = ({
+  label,
+  sublabel,
+  checked,
+  onToggle,
+}: {
+  label: string;
+  sublabel?: string;
+  checked: boolean;
+  onToggle: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onToggle}
+    className={`w-full flex items-center gap-3 p-4 rounded-2xl border-2 text-left transition-all duration-200 ${
+      checked
+        ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200 shadow-md'
+        : 'border-slate-200 bg-white hover:border-emerald-300 hover:shadow-sm'
+    }`}
+  >
+    <div
+      className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+        checked ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300'
+      }`}
+    >
+      {checked && (
+        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      )}
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className={`font-semibold text-sm leading-tight ${checked ? 'text-emerald-800' : 'text-slate-800'}`}>
+        {label}
+      </p>
+      {sublabel && (
+        <p className={`text-xs mt-0.5 ${checked ? 'text-emerald-600' : 'text-slate-400'}`}>{sublabel}</p>
+      )}
+    </div>
+    <span className={`text-xs font-bold flex-shrink-0 ${checked ? 'text-emerald-600' : 'text-slate-400'}`}>
+      {checked ? 'Yes' : 'No'}
+    </span>
+  </button>
+);
+
 // ── NumericStepper ────────────────────────────────────────────────────────────
 
 const NumericStepper = ({
@@ -162,50 +209,13 @@ const NumericStepper = ({
   );
 };
 
-// ── FrequencyDropdown ─────────────────────────────────────────────────────────
-
-const FREQ_OPTIONS: { value: FoodFrequency; label: string }[] = [
-  { value: 'never',     label: 'Never' },
-  { value: 'rarely',    label: 'Rarely (<1×/wk)' },
-  { value: 'sometimes', label: 'Sometimes (1–2×/wk)' },
-  { value: 'often',     label: 'Often (3–4×/wk)' },
-  { value: 'daily',     label: 'Daily' },
-];
-
-const FrequencyDropdown = ({
-  label,
-  value,
-  onChange,
-  sublabel,
-}: {
-  label: string;
-  value: FoodFrequency;
-  onChange: (val: FoodFrequency) => void;
-  sublabel?: string;
-}) => (
-  <div className="flex flex-col gap-1.5">
-    <label className="text-sm font-semibold text-slate-700">{label}</label>
-    {sublabel && <p className="text-xs text-slate-400 -mt-0.5">{sublabel}</p>}
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value as FoodFrequency)}
-      className="w-full border-2 border-slate-200 rounded-xl p-3 bg-white text-slate-800 text-sm focus:border-blue-500 focus:outline-none transition-colors"
-    >
-      {FREQ_OPTIONS.map(opt => (
-        <option key={opt.value} value={opt.value}>{opt.label}</option>
-      ))}
-    </select>
-  </div>
-);
-
-
 // ── Step 1: Sex + Age ─────────────────────────────────────────────────────────
 
 const Step1 = ({ profile, handleChange }: StepProps) => (
   <div className="space-y-6">
     <div>
       <h2 className="text-2xl font-extrabold text-slate-900 mb-1">About you</h2>
-      <p className="text-slate-500 text-sm">Tell us your biological sex to calibrate the risk model.</p>
+      <p className="text-slate-500 text-sm">Tell us your sex and age to calibrate the risk model.</p>
     </div>
 
     <div className="grid grid-cols-2 gap-3">
@@ -222,6 +232,23 @@ const Step1 = ({ profile, handleChange }: StepProps) => (
         onClick={() => handleChange('sex', 'female')}
       />
     </div>
+
+    <div className="flex justify-center pt-2">
+      <NumericStepper
+        label="Age"
+        hint="This model was built on adults aged 40–73"
+        value={profile.age}
+        onChange={(v) => handleChange('age', v)}
+        min={18} max={90}
+        unit="yrs"
+      />
+    </div>
+
+    {profile.age < 40 && (
+      <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+        The underlying model was trained on adults 40–73. Results outside this range are extrapolated.
+      </p>
+    )}
   </div>
 );
 
@@ -319,12 +346,12 @@ const Step3 = ({ profile, handleChange }: StepProps) => (
   </div>
 );
 
-// ── Step 4: Nicotine ──────────────────────────────────────────────────────────
+// ── Step 4: Smoking ───────────────────────────────────────────────────────────
 
 const Step4 = ({ profile, handleChange }: StepProps) => (
   <div className="space-y-6">
     <div>
-      <h2 className="text-2xl font-extrabold text-slate-900 mb-1">Nicotine use</h2>
+      <h2 className="text-2xl font-extrabold text-slate-900 mb-1">Smoking</h2>
       <p className="text-slate-500 text-sm">
         Includes cigarettes, e-cigarettes, cigars, vapes, or nicotine pouches.
       </p>
@@ -333,49 +360,35 @@ const Step4 = ({ profile, handleChange }: StepProps) => (
     <div className="space-y-3">
       <OptionCard
         icon="🚬"
-        label="Current user"
-        sublabel="I currently use a nicotine product"
+        label="Current smoker"
+        sublabel="I currently smoke or use nicotine products"
         selected={profile.smokingStatus === 'current'}
         onClick={() => handleChange('smokingStatus', 'current')}
       />
       <OptionCard
         icon="🕐"
-        label="Former user"
-        sublabel="I used to use nicotine but have quit"
-        selected={profile.smokingStatus === 'former'}
-        onClick={() => handleChange('smokingStatus', 'former')}
+        label="Previous smoker"
+        sublabel="I used to smoke but have quit"
+        selected={profile.smokingStatus === 'previous'}
+        onClick={() => handleChange('smokingStatus', 'previous')}
       />
       <OptionCard
         icon="✅"
-        label="Never used"
-        sublabel="I have never regularly used nicotine"
+        label="Never smoked"
+        sublabel="I have never regularly smoked"
         selected={profile.smokingStatus === 'never'}
         onClick={() => handleChange('smokingStatus', 'never')}
       />
     </div>
-
-    {/* Conditional: years quit */}
-    {profile.smokingStatus === 'former' && (
-      <div className="mt-2 p-5 bg-slate-50 rounded-2xl border border-slate-200 flex justify-center transition-all duration-300">
-        <NumericStepper
-          label="Years since quitting"
-          hint="How long ago did you quit?"
-          value={profile.smokingYearsQuit}
-          onChange={(v) => handleChange('smokingYearsQuit', v)}
-          min={0} max={50}
-          unit="yrs"
-        />
-      </div>
-    )}
   </div>
 );
 
 // ── Step 5: Alcohol ───────────────────────────────────────────────────────────
 
 const ALCOHOL_OPTIONS: { value: AlcoholFrequency; icon: string; label: string; sublabel: string }[] = [
-  { value: 'daily',             icon: '🍺', label: 'Daily or almost daily',       sublabel: '~14 drinks/week' },
-  { value: 'weekly_frequent',   icon: '🍷', label: 'Three or four times a week',  sublabel: '~4 drinks/week' },
-  { value: 'weekly_occasional', icon: '🥂', label: 'Once or twice a week',        sublabel: '~1–2 drinks/week' },
+  { value: 'daily',             icon: '🍺', label: 'Daily or almost daily',       sublabel: 'Most days of the week' },
+  { value: 'weekly_frequent',   icon: '🍷', label: 'Three or four times a week',  sublabel: 'Several times a week' },
+  { value: 'weekly_occasional', icon: '🥂', label: 'Once or twice a week',        sublabel: 'A few times a week' },
   { value: 'monthly',           icon: '🍹', label: 'One to three times a month',  sublabel: 'Occasional' },
   { value: 'special',           icon: '🎉', label: 'Special occasions only',      sublabel: 'Very rarely' },
   { value: 'never',             icon: '🚫', label: 'Never',                       sublabel: 'I don\'t drink' },
@@ -405,17 +418,24 @@ const Step5 = ({ profile, handleChange }: StepProps) => (
 // ── Step 6: Physical Activity ─────────────────────────────────────────────────
 
 const Step6 = ({ profile, handleChange }: StepProps) => {
-  const totalMins = profile.moderateActivityMins + profile.vigorousActivityMins * 2;
+  const modMinsWk = profile.moderateActivityDays * Math.min(180, profile.moderateActivityMinsPerDay);
+  const vigMinsWk = profile.vigorousActivityDays * Math.min(180, profile.vigorousActivityMinsPerDay);
+  const totalEquiv = modMinsWk + vigMinsWk * 2;
+
+  const paCategory =
+    modMinsWk === 0 && vigMinsWk === 0 ? 'Poor' :
+    (modMinsWk >= 150 || vigMinsWk >= 75 || (modMinsWk + 2 * vigMinsWk) >= 150) ? 'Ideal' :
+    'Intermediate';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
         <h2 className="text-2xl font-extrabold text-slate-900 mb-1">Physical Activity</h2>
-        <p className="text-slate-500 text-sm">How much do you exercise per week on average?</p>
+        <p className="text-slate-500 text-sm">How much do you exercise on a typical week?</p>
       </div>
 
-      {/* Moderate */}
-      <div className="p-5 bg-white rounded-2xl border-2 border-slate-200 space-y-3">
+      {/* Moderate activity */}
+      <div className="p-5 bg-white rounded-2xl border-2 border-slate-200 space-y-4">
         <div className="flex items-center gap-2">
           <span className="text-2xl">🚶</span>
           <div>
@@ -423,20 +443,31 @@ const Step6 = ({ profile, handleChange }: StepProps) => {
             <p className="text-xs text-slate-400">Brisk walking, casual cycling, light swimming</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <input
-            type="number"
-            min={0} max={2000} step={10}
-            value={profile.moderateActivityMins}
-            onChange={(e) => handleChange('moderateActivityMins', Math.min(2000, Math.max(0, Number(e.target.value))))}
-            className="w-28 text-center text-2xl font-black border-2 border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:outline-none text-slate-900"
+        <div className="grid grid-cols-2 gap-6">
+          <NumericStepper
+            label="Days per week"
+            value={profile.moderateActivityDays}
+            onChange={(v) => handleChange('moderateActivityDays', v)}
+            min={0} max={7}
+            unit="days"
           />
-          <span className="text-slate-500 font-medium">minutes / week</span>
+          <NumericStepper
+            label="Minutes on those days"
+            hint="Max 180 min counted"
+            value={profile.moderateActivityMinsPerDay}
+            onChange={(v) => handleChange('moderateActivityMinsPerDay', Math.min(180, v))}
+            min={0} max={180}
+            step={10}
+            unit="min"
+          />
         </div>
+        <p className="text-xs text-slate-400 text-center">
+          = {modMinsWk} min/week moderate
+        </p>
       </div>
 
-      {/* Vigorous */}
-      <div className="p-5 bg-white rounded-2xl border-2 border-slate-200 space-y-3">
+      {/* Vigorous activity */}
+      <div className="p-5 bg-white rounded-2xl border-2 border-slate-200 space-y-4">
         <div className="flex items-center gap-2">
           <span className="text-2xl">🏃</span>
           <div>
@@ -444,41 +475,174 @@ const Step6 = ({ profile, handleChange }: StepProps) => {
             <p className="text-xs text-slate-400">Running, competitive sport, laps swimming</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <input
-            type="number"
-            min={0} max={2000} step={10}
-            value={profile.vigorousActivityMins}
-            onChange={(e) => handleChange('vigorousActivityMins', Math.min(2000, Math.max(0, Number(e.target.value))))}
-            className="w-28 text-center text-2xl font-black border-2 border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:outline-none text-slate-900"
+        <div className="grid grid-cols-2 gap-6">
+          <NumericStepper
+            label="Days per week"
+            value={profile.vigorousActivityDays}
+            onChange={(v) => handleChange('vigorousActivityDays', v)}
+            min={0} max={7}
+            unit="days"
           />
-          <span className="text-slate-500 font-medium">minutes / week</span>
+          <NumericStepper
+            label="Minutes on those days"
+            hint="Max 180 min counted"
+            value={profile.vigorousActivityMinsPerDay}
+            onChange={(v) => handleChange('vigorousActivityMinsPerDay', Math.min(180, v))}
+            min={0} max={180}
+            step={10}
+            unit="min"
+          />
         </div>
-        <p className="text-xs text-blue-600 font-semibold">⚡ Vigorous minutes count double toward your total</p>
+        <p className="text-xs text-blue-600 font-semibold text-center">
+          ⚡ Vigorous counts double — = {vigMinsWk * 2} min moderate-equivalent
+        </p>
       </div>
 
-      {/* Live total */}
-      <div className="flex items-center p-4 rounded-2xl border-2 bg-slate-50 border-slate-200">
+      {/* Live summary */}
+      <div className="flex items-center justify-between p-4 rounded-2xl border-2 bg-slate-50 border-slate-200">
         <div>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total equivalent</p>
-          <p className="text-3xl font-black text-slate-800">{totalMins} <span className="text-base font-semibold">min/wk</span></p>
+          <p className="text-3xl font-black text-slate-800">
+            {totalEquiv} <span className="text-base font-semibold">min/wk</span>
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Activity level</p>
+          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+            paCategory === 'Ideal' ? 'bg-teal-100 text-teal-700' :
+            paCategory === 'Intermediate' ? 'bg-amber-100 text-amber-700' :
+            'bg-slate-100 text-slate-600'
+          }`}>
+            {paCategory}
+          </span>
         </div>
       </div>
     </div>
   );
 };
 
-// ── Step 7: Sun Exposure ──────────────────────────────────────────────────────
+// ── Step 7: Sedentary Time ────────────────────────────────────────────────────
 
 const Step7 = ({ profile, handleChange }: StepProps) => {
+  const totalSed = Math.min(24, profile.tvHoursPerDay + profile.computerHoursPerDay + Math.min(11, profile.drivingHoursPerDay));
+
+  const sedCategory =
+    totalSed < 3.0 ? 'Low (< 3h)' :
+    totalSed < 4.0 ? 'Moderate (3–4h)' :
+    totalSed < 5.5 ? 'High (4–5.5h)' :
+    'Very High (≥ 5.5h)';
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-2xl font-extrabold text-slate-900 mb-1">Sedentary Time</h2>
+        <p className="text-slate-500 text-sm">
+          How many hours per day do you spend sitting (outside of sleep)?
+        </p>
+      </div>
+
+      {/* TV */}
+      <div className="p-5 bg-white rounded-2xl border-2 border-slate-200">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-2xl">📺</span>
+          <div>
+            <p className="font-bold text-slate-800">Television / streaming</p>
+            <p className="text-xs text-slate-400">Hours watching TV or videos per day</p>
+          </div>
+        </div>
+        <div className="flex justify-center">
+          <NumericStepper
+            label="Hours per day"
+            value={profile.tvHoursPerDay}
+            onChange={(v) => handleChange('tvHoursPerDay', v)}
+            min={0} max={16}
+            step={0.5}
+            unit="hr"
+          />
+        </div>
+      </div>
+
+      {/* Computer */}
+      <div className="p-5 bg-white rounded-2xl border-2 border-slate-200">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-2xl">💻</span>
+          <div>
+            <p className="font-bold text-slate-800">Computer / tablet (leisure)</p>
+            <p className="text-xs text-slate-400">Hours on screens (not work) per day</p>
+          </div>
+        </div>
+        <div className="flex justify-center">
+          <NumericStepper
+            label="Hours per day"
+            value={profile.computerHoursPerDay}
+            onChange={(v) => handleChange('computerHoursPerDay', v)}
+            min={0} max={16}
+            step={0.5}
+            unit="hr"
+          />
+        </div>
+      </div>
+
+      {/* Driving */}
+      <div className="p-5 bg-white rounded-2xl border-2 border-slate-200">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-2xl">🚗</span>
+          <div>
+            <p className="font-bold text-slate-800">Driving</p>
+            <p className="text-xs text-slate-400">Hours driving per day (max 11h counted)</p>
+          </div>
+        </div>
+        <div className="flex justify-center">
+          <NumericStepper
+            label="Hours per day"
+            value={profile.drivingHoursPerDay}
+            onChange={(v) => handleChange('drivingHoursPerDay', v)}
+            min={0} max={11}
+            step={0.5}
+            unit="hr"
+          />
+        </div>
+      </div>
+
+      {/* Live summary */}
+      <div className="flex items-center justify-between p-4 rounded-2xl border-2 bg-slate-50 border-slate-200">
+        <div>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total sitting time</p>
+          <p className="text-3xl font-black text-slate-800">
+            {totalSed.toFixed(1)} <span className="text-base font-semibold">hr/day</span>
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Category</p>
+          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+            totalSed < 3.0 ? 'bg-teal-100 text-teal-700' :
+            totalSed < 4.0 ? 'bg-amber-100 text-amber-700' :
+            'bg-red-100 text-red-700'
+          }`}>
+            {sedCategory}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Step 8: Sun Exposure ──────────────────────────────────────────────────────
+
+const Step8 = ({ profile, handleChange }: StepProps) => {
   const avg = (profile.sunExposureSummer + profile.sunExposureWinter) / 2;
+  const sunQuartile =
+    avg < 1.5 ? 'Q1 (< 1.5h)' :
+    avg < 2.5 ? 'Q2 (1.5–2.5h)' :
+    avg < 3.5 ? 'Q3 (2.5–3.5h)' :
+    'Q4 (≥ 3.5h)';
 
   return (
     <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-extrabold text-slate-900 mb-1">Sun Exposure</h2>
         <p className="text-slate-500 text-sm">
-          Outdoor sunlight supports vitamin D synthesis, linked to cardiovascular health.
+          How many hours per day do you spend outdoors on average?
         </p>
       </div>
 
@@ -511,393 +675,245 @@ const Step7 = ({ profile, handleChange }: StepProps) => {
       </div>
 
       {/* Live average */}
-      <div className="flex items-center p-4 rounded-2xl border-2 bg-slate-50 border-slate-200">
+      <div className="flex items-center justify-between p-4 rounded-2xl border-2 bg-slate-50 border-slate-200">
         <div>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Annual average</p>
           <p className="text-3xl font-black text-slate-800">
             {avg.toFixed(1)} <span className="text-base font-semibold">hr/day</span>
           </p>
         </div>
+        <div className="text-right">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Quartile</p>
+          <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+            {sunQuartile}
+          </span>
+        </div>
       </div>
     </div>
   );
 };
 
-// ── Step 8: Fruits & Vegetables ───────────────────────────────────────────────
+// ── Step 9: Diet Part 1 (5 items) ────────────────────────────────────────────
 
-const Step8 = ({ profile, handleChange }: StepProps) => (
-  <div className="space-y-5">
-    <div>
-      <h2 className="text-2xl font-extrabold text-slate-900 mb-1">Fruits & Vegetables</h2>
-      <p className="text-slate-500 text-sm">How much fruit and veg do you typically eat each day?</p>
-    </div>
-
-    {/* Vegetables panel */}
-    <div className="bg-green-50/60 border border-green-100 rounded-2xl p-5 space-y-5">
-      <div className="flex items-center gap-2">
-        <span className="text-xl">🥦</span>
-        <p className="text-xs font-black text-green-700 uppercase tracking-widest">Vegetables</p>
-      </div>
-      <p className="text-xs text-slate-400 -mt-3">A tablespoon is roughly a serving spoon's worth</p>
-      <div className="grid grid-cols-2 gap-6">
-        <NumericStepper
-          label="Cooked vegetables"
-          hint="Tablespoons per day"
-          value={profile.cookedVegTablespoons}
-          onChange={(v) => handleChange('cookedVegTablespoons', v)}
-          min={0} max={20}
-          unit="tbsp"
-        />
-        <NumericStepper
-          label="Raw veg / salad"
-          hint="Tablespoons per day"
-          value={profile.rawVegTablespoons}
-          onChange={(v) => handleChange('rawVegTablespoons', v)}
-          min={0} max={20}
-          unit="tbsp"
-        />
-      </div>
-    </div>
-
-    {/* Fruit panel */}
-    <div className="bg-orange-50/60 border border-orange-100 rounded-2xl p-5 space-y-5">
-      <div className="flex items-center gap-2">
-        <span className="text-xl">🍎</span>
-        <p className="text-xs font-black text-orange-700 uppercase tracking-widest">Fruit</p>
-      </div>
-      <p className="text-xs text-slate-400 -mt-3">e.g. 1 apple, 1 banana, or a handful of berries = 1 piece</p>
-      <div className="grid grid-cols-2 gap-6">
-        <NumericStepper
-          label="Fresh fruit"
-          hint="Pieces per day"
-          value={profile.freshFruitPieces}
-          onChange={(v) => handleChange('freshFruitPieces', v)}
-          min={0} max={20}
-          unit="pc"
-        />
-        <NumericStepper
-          label="Dried fruit"
-          hint="Portions per day"
-          value={profile.driedFruitPieces}
-          onChange={(v) => handleChange('driedFruitPieces', v)}
-          min={0} max={10}
-          unit="ptn"
-        />
-      </div>
-    </div>
-  </div>
-);
-
-// ── Step 9: Fish & Meat ────────────────────────────────────────────────────────
-
-const Step9 = ({ profile, handleChange }: StepProps) => (
-  <div className="space-y-5">
-    <div>
-      <h2 className="text-2xl font-extrabold text-slate-900 mb-1">Fish & Meat</h2>
-      <p className="text-slate-500 text-sm">How often do you eat fish, meat and processed meat products?</p>
-    </div>
-
-    {/* Fish panel */}
-    <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-5 space-y-4">
-      <div className="flex items-center gap-2">
-        <span className="text-xl">🐟</span>
-        <p className="text-xs font-black text-blue-700 uppercase tracking-widest">Fish & Seafood</p>
-      </div>
-      <FrequencyDropdown
-        label="Oily fish (salmon, mackerel, sardines, herring)"
-        sublabel="Rich in omega-3 — aim for 2+ times per week"
-        value={profile.oilyFishFreq}
-        onChange={(v) => handleChange('oilyFishFreq', v)}
-      />
-      <FrequencyDropdown
-        label="Other fish & seafood (white fish, prawns, tuna)"
-        value={profile.otherFishFreq}
-        onChange={(v) => handleChange('otherFishFreq', v)}
-      />
-    </div>
-
-    {/* Poultry panel */}
-    <div className="bg-amber-50/60 border border-amber-100 rounded-2xl p-5 space-y-4">
-      <div className="flex items-center gap-2">
-        <span className="text-xl">🍗</span>
-        <p className="text-xs font-black text-amber-700 uppercase tracking-widest">Poultry</p>
-      </div>
-      <FrequencyDropdown
-        label="Chicken or turkey"
-        sublabel="A healthier alternative to red meat"
-        value={profile.poultryFreq}
-        onChange={(v) => handleChange('poultryFreq', v)}
-      />
-    </div>
-
-    {/* Red & processed meat panel */}
-    <div className="bg-red-50/60 border border-red-100 rounded-2xl p-5 space-y-4">
-      <div className="flex items-center gap-2">
-        <span className="text-xl">🥩</span>
-        <p className="text-xs font-black text-red-700 uppercase tracking-widest">Red & Processed Meat</p>
-      </div>
-      <FrequencyDropdown
-        label="Processed meat (bacon, sausages, deli meats, hot dogs)"
-        sublabel="⚠️ Linked to higher heart risk — limit where possible"
-        value={profile.processedMeatFreq}
-        onChange={(v) => handleChange('processedMeatFreq', v)}
-      />
-      <FrequencyDropdown
-        label="Beef"
-        value={profile.beefFreq}
-        onChange={(v) => handleChange('beefFreq', v)}
-      />
-      <FrequencyDropdown
-        label="Lamb"
-        value={profile.lambFreq}
-        onChange={(v) => handleChange('lambFreq', v)}
-      />
-      <FrequencyDropdown
-        label="Pork"
-        value={profile.porkFreq}
-        onChange={(v) => handleChange('porkFreq', v)}
-      />
-    </div>
-  </div>
-);
-
-// ── Step 10: Dairy, Cereals & Hydration ───────────────────────────────────────
-
-const Step10 = ({ profile, handleChange }: StepProps) => {
-  const MILK_OPTIONS: { value: MilkType; icon: string; label: string }[] = [
-    { value: 'whole',   icon: '🥛', label: 'Whole milk' },
-    { value: 'semi',    icon: '🥛', label: 'Semi-skimmed' },
-    { value: 'skimmed', icon: '🥛', label: 'Skimmed milk' },
-    { value: 'plant',   icon: '🌿', label: 'Plant-based' },
-    { value: 'none',    icon: '🚫', label: 'I don\'t use milk' },
-  ];
-
-  const SPREAD_OPTIONS: { value: SpreadType; icon: string; label: string }[] = [
-    { value: 'butter',    icon: '🧈', label: 'Butter' },
-    { value: 'margarine', icon: '🟡', label: 'Margarine / low-fat spread' },
-    { value: 'olive',     icon: '🫒', label: 'Olive oil spread' },
-    { value: 'none',      icon: '🚫', label: 'I don\'t use spreads' },
-  ];
-
-  const SALT_OPTIONS: { value: SaltUsage; icon: string; label: string }[] = [
-    { value: 'always',    icon: '🧂', label: 'Always add salt' },
-    { value: 'usually',   icon: '🧂', label: 'Usually add salt' },
-    { value: 'sometimes', icon: '🧂', label: 'Sometimes add salt' },
-    { value: 'rarely',    icon: '✅', label: 'Rarely / never add salt' },
-  ];
+const Step9 = ({ profile, handleChange }: StepProps) => {
+  const score1 = [profile.dietFruit, profile.dietVeg, profile.dietWholeGrains, profile.dietFish, profile.dietDairy].filter(Boolean).length;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div>
-        <h2 className="text-2xl font-extrabold text-slate-900 mb-1">Dairy, Cereals & Hydration</h2>
-        <p className="text-slate-500 text-sm">Tell us about your dairy choices, cereal habits, salt use and water intake.</p>
+        <h2 className="text-2xl font-extrabold text-slate-900 mb-1">Diet — Part 1</h2>
+        <p className="text-slate-500 text-sm">
+          Tick each item you typically meet. There are no right answers — just be honest.
+        </p>
       </div>
 
-      {/* Milk panel */}
-      <div className="bg-sky-50/60 border border-sky-100 rounded-2xl p-5 space-y-3">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xl">🥛</span>
-          <p className="text-xs font-black text-sky-700 uppercase tracking-widest">Milk</p>
-        </div>
-        <div className="space-y-2">
-          {MILK_OPTIONS.map(opt => (
-            <OptionCard
-              key={opt.value}
-              icon={opt.icon}
-              label={opt.label}
-              selected={profile.milkType === opt.value}
-              onClick={() => handleChange('milkType', opt.value as MilkType)}
-            />
-          ))}
-        </div>
+      <div className="space-y-2.5">
+        <CheckCard
+          label="3+ servings of fruit per day"
+          sublabel="e.g. an apple, banana, or handful of berries = 1 serving"
+          checked={profile.dietFruit}
+          onToggle={() => handleChange('dietFruit', !profile.dietFruit)}
+        />
+        <CheckCard
+          label="3+ servings of vegetables per day"
+          sublabel="e.g. a side salad, or 3 tablespoons cooked veg = 1 serving"
+          checked={profile.dietVeg}
+          onToggle={() => handleChange('dietVeg', !profile.dietVeg)}
+        />
+        <CheckCard
+          label="3+ servings of whole grains per day"
+          sublabel="e.g. wholemeal bread, oats, brown rice, or wholegrain pasta"
+          checked={profile.dietWholeGrains}
+          onToggle={() => handleChange('dietWholeGrains', !profile.dietWholeGrains)}
+        />
+        <CheckCard
+          label="Fish at least twice a week"
+          sublabel="Oily fish (salmon, mackerel, sardines) or white fish"
+          checked={profile.dietFish}
+          onToggle={() => handleChange('dietFish', !profile.dietFish)}
+        />
+        <CheckCard
+          label="2+ servings of dairy per day"
+          sublabel="e.g. milk, yoghurt, or cheese"
+          checked={profile.dietDairy}
+          onToggle={() => handleChange('dietDairy', !profile.dietDairy)}
+        />
       </div>
 
-      {/* Spreads panel */}
-      <div className="bg-yellow-50/60 border border-yellow-100 rounded-2xl p-5 space-y-3">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xl">🧈</span>
-          <p className="text-xs font-black text-yellow-700 uppercase tracking-widest">Spreads & Fats</p>
-        </div>
-        <div className="space-y-2">
-          {SPREAD_OPTIONS.map(opt => (
-            <OptionCard
-              key={opt.value}
-              icon={opt.icon}
-              label={opt.label}
-              selected={profile.spreadType === opt.value}
-              onClick={() => handleChange('spreadType', opt.value as SpreadType)}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Cereals panel */}
-      <div className="bg-amber-50/60 border border-amber-100 rounded-2xl p-5 space-y-3">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xl">🥣</span>
-          <p className="text-xs font-black text-amber-700 uppercase tracking-widest">Cereals & Porridge</p>
-        </div>
-        <p className="text-xs text-slate-400 -mt-1">e.g. oats, muesli, wholegrain cereal</p>
-        <div className="flex justify-center pt-2">
-          <NumericStepper
-            label="Bowls per week"
-            value={profile.cerealBowlsPerWeek}
-            onChange={(v) => handleChange('cerealBowlsPerWeek', v)}
-            min={0} max={21}
-            unit="bowls"
-          />
-        </div>
-      </div>
-
-      {/* Salt & Water panel */}
-      <div className="bg-teal-50/60 border border-teal-100 rounded-2xl p-5 space-y-4">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xl">💧</span>
-          <p className="text-xs font-black text-teal-700 uppercase tracking-widest">Salt & Water</p>
-        </div>
-
-        <div>
-          <p className="text-sm font-semibold text-slate-700 mb-2">How often do you add salt to your food?</p>
-          <div className="space-y-2">
-            {SALT_OPTIONS.map(opt => (
-              <OptionCard
-                key={opt.value}
-                icon={opt.icon}
-                label={opt.label}
-                selected={profile.saltUsage === opt.value}
-                onClick={() => handleChange('saltUsage', opt.value as SaltUsage)}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="flex justify-center pt-2">
-          <NumericStepper
-            label="Water glasses per day"
-            hint="250 ml per glass"
-            value={profile.waterGlassesPerDay}
-            onChange={(v) => handleChange('waterGlassesPerDay', v)}
-            min={0} max={20}
-            unit="glasses"
-          />
-        </div>
+      <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-0.5">Score so far</p>
+        <p className="text-2xl font-black text-slate-800">{score1} <span className="text-sm font-semibold text-slate-500">/ 5</span></p>
       </div>
     </div>
   );
 };
 
-// ── Main InputForm (wizard shell) ─────────────────────────────────────────────
+// ── Step 10: Diet Part 2 (5 items) ───────────────────────────────────────────
+
+const Step10 = ({ profile, handleChange }: StepProps) => {
+  const totalScore = [
+    profile.dietFruit, profile.dietVeg, profile.dietWholeGrains, profile.dietFish, profile.dietDairy,
+    profile.dietOil, profile.dietRefinedGrains, profile.dietProcessedMeat, profile.dietRedMeat, profile.dietSugar,
+  ].filter(Boolean).length;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-2xl font-extrabold text-slate-900 mb-1">Diet — Part 2</h2>
+        <p className="text-slate-500 text-sm">
+          Tick each statement that describes your usual eating habits.
+        </p>
+      </div>
+
+      <div className="space-y-2.5">
+        <CheckCard
+          label="Use plant-based oil at least twice a day"
+          sublabel="e.g. olive oil, rapeseed oil — for cooking or dressing"
+          checked={profile.dietOil}
+          onToggle={() => handleChange('dietOil', !profile.dietOil)}
+        />
+        <CheckCard
+          label="Limit refined grains to 2 or fewer servings a day"
+          sublabel="White bread, white rice, white pasta, pastries"
+          checked={profile.dietRefinedGrains}
+          onToggle={() => handleChange('dietRefinedGrains', !profile.dietRefinedGrains)}
+        />
+        <CheckCard
+          label="Eat processed meat once a week or less"
+          sublabel="Bacon, sausages, ham, salami, hot dogs"
+          checked={profile.dietProcessedMeat}
+          onToggle={() => handleChange('dietProcessedMeat', !profile.dietProcessedMeat)}
+        />
+        <CheckCard
+          label="Eat red meat twice a week or less"
+          sublabel="Beef, lamb, pork, veal"
+          checked={profile.dietRedMeat}
+          onToggle={() => handleChange('dietRedMeat', !profile.dietRedMeat)}
+        />
+        <CheckCard
+          label="Avoid sugar-sweetened drinks"
+          sublabel="Sodas, energy drinks, sweetened juices — not diet versions"
+          checked={profile.dietSugar}
+          onToggle={() => handleChange('dietSugar', !profile.dietSugar)}
+        />
+      </div>
+
+      {/* Total score */}
+      <div className="mt-2 p-4 rounded-xl border-2 bg-slate-50 border-slate-200 text-center">
+        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total diet score</p>
+        <p className="text-4xl font-black text-slate-800">
+          {totalScore} <span className="text-lg font-semibold text-slate-500">/ 10</span>
+        </p>
+        <p className={`text-xs font-semibold mt-1 ${totalScore >= 5 ? 'text-teal-600' : 'text-slate-400'}`}>
+          {totalScore >= 7 ? 'Excellent dietary habits' : totalScore >= 5 ? 'Good dietary habits' : 'Room for dietary improvement'}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ── Main InputForm ────────────────────────────────────────────────────────────
+
+const TOTAL_STEPS = 10;
 
 export const InputForm: React.FC<InputFormProps> = ({ onCalculate }) => {
-  const TOTAL_STEPS = 10;
-
-  const [currentStep, setCurrentStep] = useState(1);
-  const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
+  const [step, setStep]       = useState(1);
   const [profile, setProfile] = useState<UserProfile>(defaultProfile);
 
-  // Imperial height/weight local state
-  const [heightFeet, setHeightFeet] = useState(5);
-  const [heightInches, setHeightInches] = useState(9);
-  const [weightLbs, setWeightLbs] = useState(176);
+  // Imperial inputs — kept local so they don't pollute UserProfile
+  const [heightFeet,   setHeightFeetRaw]   = useState(5);
+  const [heightInches, setHeightInchesRaw] = useState(9);
+  const [weightLbs,    setWeightLbsRaw]    = useState(176);
 
-  // Convert imperial → metric on change
-  useEffect(() => {
-    const totalInches = heightFeet * 12 + heightInches;
+  // Sync imperial → metric → BMI whenever imperial values change
+  const syncMetric = (ft: number, inches: number, lbs: number) => {
+    const totalInches = ft * 12 + inches;
     const cm  = totalInches * 2.54;
-    const kg  = weightLbs * 0.453592;
-    const bmi = cm > 0 ? kg / Math.pow(cm / 100, 2) : 0;
-    setProfile(prev => ({
-      ...prev,
-      heightCm: parseFloat(cm.toFixed(1)),
-      weightKg: parseFloat(kg.toFixed(1)),
-      bmi: parseFloat(bmi.toFixed(1)),
-    }));
-  }, [heightFeet, heightInches, weightLbs]);
+    const kg  = lbs * 0.453592;
+    const bmi = parseFloat((kg / ((cm / 100) ** 2)).toFixed(1));
+    setProfile(p => ({ ...p, heightCm: parseFloat(cm.toFixed(1)), weightKg: parseFloat(kg.toFixed(1)), bmi }));
+  };
 
-  const handleChange = (field: keyof UserProfile, value: any) =>
-    setProfile(prev => ({ ...prev, [field]: value }));
+  const setHeightFeet = (v: number) => { setHeightFeetRaw(v);   syncMetric(v, heightInches, weightLbs); };
+  const setHeightInches = (v: number) => { setHeightInchesRaw(v); syncMetric(heightFeet, v, weightLbs); };
+  const setWeightLbs = (v: number) => { setWeightLbsRaw(v);    syncMetric(heightFeet, heightInches, v); };
 
-  const goNext = () => {
-    setDirection('forward');
-    if (currentStep < TOTAL_STEPS) {
-      setCurrentStep(s => s + 1);
-    } else {
-      onCalculate(profile);
+  // Init metric from defaults
+  useEffect(() => { syncMetric(heightFeet, heightInches, weightLbs); }, []); // eslint-disable-line
+
+  const handleChange = (field: keyof UserProfile, value: any) => {
+    setProfile(p => ({ ...p, [field]: value }));
+  };
+
+  const handleNext = () => {
+    if (step < TOTAL_STEPS) setStep(s => s + 1);
+    else {
+      // Compute dietQuality before submitting
+      const dietScore = [
+        profile.dietFruit, profile.dietVeg, profile.dietWholeGrains, profile.dietFish, profile.dietDairy,
+        profile.dietOil, profile.dietRefinedGrains, profile.dietProcessedMeat, profile.dietRedMeat, profile.dietSugar,
+      ].filter(Boolean).length;
+      onCalculate({ ...profile, dietQuality: dietScore });
     }
   };
 
-  const goBack = () => {
-    setDirection('backward');
-    setCurrentStep(s => Math.max(1, s - 1));
-  };
+  const handleBack = () => { if (step > 1) setStep(s => s - 1); };
 
   const renderStep = () => {
-    const props: StepProps = { profile, handleChange };
-    switch (currentStep) {
-      case 1: return <Step1 {...props} />;
-      case 2: return (
+    switch (step) {
+      case 1:  return <Step1 profile={profile} handleChange={handleChange} />;
+      case 2:  return (
         <Step2
-          {...props}
+          profile={profile} handleChange={handleChange}
           heightFeet={heightFeet} setHeightFeet={setHeightFeet}
           heightInches={heightInches} setHeightInches={setHeightInches}
           weightLbs={weightLbs} setWeightLbs={setWeightLbs}
         />
       );
-      case 3: return <Step3 {...props} />;
-      case 4: return <Step4 {...props} />;
-      case 5: return <Step5 {...props} />;
-      case 6: return <Step6 {...props} />;
-      case 7:  return <Step7  {...props} />;
-      case 8:  return <Step8  {...props} />;
-      case 9:  return <Step9  {...props} />;
-      case 10: return <Step10 {...props} />;
+      case 3:  return <Step3 profile={profile} handleChange={handleChange} />;
+      case 4:  return <Step4 profile={profile} handleChange={handleChange} />;
+      case 5:  return <Step5 profile={profile} handleChange={handleChange} />;
+      case 6:  return <Step6 profile={profile} handleChange={handleChange} />;
+      case 7:  return <Step7 profile={profile} handleChange={handleChange} />;
+      case 8:  return <Step8 profile={profile} handleChange={handleChange} />;
+      case 9:  return <Step9 profile={profile} handleChange={handleChange} />;
+      case 10: return <Step10 profile={profile} handleChange={handleChange} />;
       default: return null;
     }
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto pb-28">
+    <div className="w-full max-w-lg mx-auto">
+      <ProgressBar currentStep={step} totalSteps={TOTAL_STEPS} />
 
-      {/* Progress */}
-      <ProgressBar currentStep={currentStep} totalSteps={TOTAL_STEPS} />
-
-      {/* Animated step content */}
-      <div
-        key={currentStep}
-        className={direction === 'forward' ? 'step-enter-forward' : 'step-enter-backward'}
-      >
+      {/* Step content */}
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-7 mb-6 min-h-[380px]">
         {renderStep()}
       </div>
 
-      {/* Fixed navigation footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-200 z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
-        <div className="max-w-xl mx-auto px-4 py-4 flex items-center gap-3">
-
-          {/* Back button */}
-          {currentStep > 1 && (
-            <button
-              type="button"
-              onClick={goBack}
-              className="flex items-center gap-1.5 px-5 py-3 rounded-full border-2 border-slate-200 text-slate-600 font-semibold text-sm hover:border-slate-300 hover:bg-slate-50 transition-all"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Back
-            </button>
-          )}
-
-          {/* Next / Calculate */}
+      {/* Navigation */}
+      <div className="flex items-center gap-3">
+        {step > 1 && (
           <button
             type="button"
-            onClick={goNext}
-            className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 text-white font-bold py-3.5 px-8 rounded-full shadow-lg shadow-blue-900/20 transition-all active:scale-95 hover:shadow-xl text-sm"
+            onClick={handleBack}
+            className="flex items-center gap-2 px-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-600 font-semibold hover:border-slate-300 hover:shadow-sm transition-all duration-200"
           >
-            {currentStep < TOTAL_STEPS ? (
-              <>Next <ChevronRight className="w-4 h-4" /></>
-            ) : (
-              <>Calculate My Risk <ChevronRight className="w-4 h-4" /></>
-            )}
+            <ChevronLeft size={18} /> Back
           </button>
-        </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleNext}
+          className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 text-white font-bold text-base px-6 py-3.5 rounded-2xl shadow-lg shadow-blue-900/20 transition-all duration-200 active:scale-95"
+        >
+          {step < TOTAL_STEPS ? (
+            <>Next <ChevronRight size={18} /></>
+          ) : (
+            <>Calculate My Risk <ChevronRight size={18} /></>
+          )}
+        </button>
       </div>
     </div>
   );

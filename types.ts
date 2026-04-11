@@ -6,66 +6,54 @@ export type AlcoholFrequency =
   | 'special'
   | 'never';
 
-export type FoodFrequency = 'never' | 'rarely' | 'sometimes' | 'often' | 'daily';
-export type MilkType     = 'whole' | 'semi' | 'skimmed' | 'plant' | 'none';
-export type SpreadType   = 'butter' | 'margarine' | 'olive' | 'none';
-export type SaltUsage    = 'always' | 'usually' | 'sometimes' | 'rarely';
-
 export interface UserProfile {
-  // Demographics (Q1)
+  // Demographics
+  age: number;               // 40–73 (UK Biobank range)
   sex: 'male' | 'female';
 
-  // Body composition (Q2) — stored in metric; form uses imperial locally
+  // Body composition — stored in metric; form uses imperial locally
   heightCm: number;
   weightKg: number;
   bmi: number; // computed
 
-  // Sleep (Q3)
+  // Sleep
   sleepHours: number;
 
-  // Nicotine (Q4)
-  smokingStatus: 'never' | 'former' | 'current';
-  smokingYearsQuit: number; // 0 for current/never
+  // Nicotine ('previous' matches model label)
+  smokingStatus: 'never' | 'previous' | 'current';
 
-  // Alcohol (Q5)
+  // Alcohol
   alcoholFrequency: AlcoholFrequency;
 
-  // Physical Activity (Q6)
-  moderateActivityMins: number; // mins/week
-  vigorousActivityMins: number; // mins/week
+  // Physical Activity (IPAQ-style: days × mins/day)
+  moderateActivityDays: number;        // 0–7
+  moderateActivityMinsPerDay: number;  // capped at 180
+  vigorousActivityDays: number;        // 0–7
+  vigorousActivityMinsPerDay: number;  // capped at 180
 
-  // Sun Exposure (Q7)
-  sunExposureSummer: number; // hours/day
-  sunExposureWinter: number; // hours/day
+  // Sedentary time
+  tvHoursPerDay: number;
+  computerHoursPerDay: number;
+  drivingHoursPerDay: number;  // capped at 11
 
-  // Diet — Veg & Fruit (Q8)
-  cookedVegTablespoons: number;
-  rawVegTablespoons: number;
-  freshFruitPieces: number;
-  driedFruitPieces: number;
+  // Sun exposure (seasonal hours/day)
+  sunExposureSummer: number;
+  sunExposureWinter: number;
 
-  // Diet — Fish (Q8)
-  oilyFishFreq: FoodFrequency;
-  otherFishFreq: FoodFrequency;
+  // Diet — 10 binary components (true = meets criterion)
+  dietFruit: boolean;           // ≥3 servings fruit/day
+  dietVeg: boolean;             // ≥3 servings veg/day
+  dietWholeGrains: boolean;     // ≥3 servings whole grains/day
+  dietFish: boolean;            // fish ≥2/week
+  dietDairy: boolean;           // ≥2 servings dairy/day
+  dietOil: boolean;             // plant oil ≥2 times/day
+  dietRefinedGrains: boolean;   // refined grains ≤2/day
+  dietProcessedMeat: boolean;   // processed meat ≤1/week
+  dietRedMeat: boolean;         // red meat ≤2/week
+  dietSugar: boolean;           // avoids sugar-sweetened drinks
 
-  // Diet — Meat (Q8)
-  processedMeatFreq: FoodFrequency;
-  poultryFreq: FoodFrequency;
-  beefFreq: FoodFrequency;
-  lambFreq: FoodFrequency;
-  porkFreq: FoodFrequency;
-
-  // Diet — Dairy & Fats (Q8)
-  milkType: MilkType;
-  spreadType: SpreadType;
-
-  // Diet — Cereal, Salt, Water (Q8)
-  cerealBowlsPerWeek: number;
-  saltUsage: SaltUsage;
-  waterGlassesPerDay: number;
-
-  // Computed internally
-  dietQuality: number; // 0–100, derived from 0–9 score × (100/9)
+  // Computed — sum of above (0–10)
+  dietQuality: number;
 }
 
 export interface Intervention {
@@ -98,4 +86,5 @@ export type LifestyleDomain =
   | 'sleep'
   | 'alcohol'
   | 'bmi'
-  | 'sunExposure';
+  | 'sunExposure'
+  | 'sedentary';
