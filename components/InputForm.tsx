@@ -5,6 +5,8 @@ import { ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface InputFormProps {
   onCalculate: (profile: UserProfile) => void;
+  onProfileChange?: (profile: UserProfile) => void; // live recalc after completion
+  isCompleted?: boolean;                             // enables clickable step dots
 }
 
 // ── Shared sub-component types ────────────────────────────────────────────────
@@ -16,13 +18,23 @@ interface StepProps {
 
 // ── ProgressBar ───────────────────────────────────────────────────────────────
 
-const ProgressBar = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
-  const pct = Math.round(((currentStep - 1) / totalSteps) * 100);
+const ProgressBar = ({
+  currentStep,
+  totalSteps,
+  allCompleted = false,
+  onStepClick,
+}: {
+  currentStep: number;
+  totalSteps: number;
+  allCompleted?: boolean;
+  onStepClick?: (step: number) => void;
+}) => {
+  const pct = allCompleted ? 100 : Math.round(((currentStep - 1) / totalSteps) * 100);
   return (
     <div className="mb-8">
       <div className="flex justify-between items-center mb-2">
         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-          Question {currentStep} of {totalSteps}
+          {allCompleted ? 'Edit answers below' : `Question ${currentStep} of ${totalSteps}`}
         </span>
         <span className="text-xs font-bold text-blue-600">{pct}% complete</span>
       </div>
@@ -35,26 +47,42 @@ const ProgressBar = ({ currentStep, totalSteps }: { currentStep: number; totalSt
         />
       </div>
 
-      {/* Step dots */}
+      {/* Step dots — clickable when allCompleted */}
       <div className="flex justify-between gap-1">
         {Array.from({ length: totalSteps }, (_, i) => {
           const step = i + 1;
-          const isCompleted = step < currentStep;
+          const isPast    = allCompleted ? step !== currentStep : step < currentStep;
           const isCurrent = step === currentStep;
-          return (
-            <div
-              key={step}
-              className={`flex-1 h-1.5 rounded-full transition-all duration-300 ${
-                isCompleted
-                  ? 'bg-teal-500'
-                  : isCurrent
-                  ? 'bg-blue-600 scale-y-125'
-                  : 'bg-slate-200'
-              }`}
-            />
-          );
+
+          const baseBar = `flex-1 h-1.5 rounded-full transition-all duration-300 ${
+            isPast
+              ? 'bg-teal-500'
+              : isCurrent
+              ? 'bg-blue-600 scale-y-125'
+              : 'bg-slate-200'
+          }`;
+
+          if (allCompleted && onStepClick) {
+            return (
+              <button
+                key={step}
+                type="button"
+                title={`Go to question ${step}`}
+                onClick={() => onStepClick(step)}
+                className={`${baseBar} cursor-pointer hover:opacity-75 active:scale-y-150`}
+              />
+            );
+          }
+          return <div key={step} className={baseBar} />;
         })}
       </div>
+
+      {/* Hint text once all completed */}
+      {allCompleted && (
+        <p className="text-[10px] text-slate-400 text-center mt-2">
+          Tap any bar above to jump to that question
+        </p>
+      )}
     </div>
   );
 };
@@ -816,44 +844,62 @@ const Step10 = ({ profile, handleChange }: StepProps) => {
 
 const TOTAL_STEPS = 10;
 
-export const InputForm: React.FC<InputFormProps> = ({ onCalculate }) => {
+const DIET_FIELDS: (keyof UserProfile)[] = [
+  'dietFruit', 'dietVeg', 'dietWholeGrains', 'dietFish', 'dietDairy',
+  'dietOil', 'dietRefinedGrains', 'dietProcessedMeat', 'dietRedMeat', 'dietSugar',
+];
+
+function computeDietScore(p: UserProfile): number {
+  return DIET_FIELDS.filter(f => p[f]).length;
+}
+
+export const InputForm: React.FC<InputFormProps> = ({
+  onCalculate,
+  onProfileChange,
+  isCompleted = false,
+}) => {
   const [step, setStep]       = useState(1);
   const [profile, setProfile] = useState<UserProfile>(defaultProfile);
 
-  // Imperial inputs — kept local so they don't pollute UserProfile
+  // Imperial inputs — local only, synced to metric profile
   const [heightFeet,   setHeightFeetRaw]   = useState(5);
   const [heightInches, setHeightInchesRaw] = useState(9);
   const [weightLbs,    setWeightLbsRaw]    = useState(176);
 
-  // Sync imperial → metric → BMI whenever imperial values change
+  // Sync imperial → metric → BMI
   const syncMetric = (ft: number, inches: number, lbs: number) => {
     const totalInches = ft * 12 + inches;
     const cm  = totalInches * 2.54;
     const kg  = lbs * 0.453592;
     const bmi = parseFloat((kg / ((cm / 100) ** 2)).toFixed(1));
-    setProfile(p => ({ ...p, heightCm: parseFloat(cm.toFixed(1)), weightKg: parseFloat(kg.toFixed(1)), bmi }));
+    setProfile(p => {
+      const updated = { ...p, heightCm: parseFloat(cm.toFixed(1)), weightKg: parseFloat(kg.toFixed(1)), bmi };
+      if (isCompleted) onProfileChange?.({ ...updated, dietQuality: computeDietScore(updated) });
+      return updated;
+    });
   };
 
-  const setHeightFeet = (v: number) => { setHeightFeetRaw(v);   syncMetric(v, heightInches, weightLbs); };
+  const setHeightFeet   = (v: number) => { setHeightFeetRaw(v);   syncMetric(v, heightInches, weightLbs); };
   const setHeightInches = (v: number) => { setHeightInchesRaw(v); syncMetric(heightFeet, v, weightLbs); };
-  const setWeightLbs = (v: number) => { setWeightLbsRaw(v);    syncMetric(heightFeet, heightInches, v); };
+  const setWeightLbs    = (v: number) => { setWeightLbsRaw(v);    syncMetric(heightFeet, heightInches, v); };
 
-  // Init metric from defaults
+  // Init metric from defaults on mount
   useEffect(() => { syncMetric(heightFeet, heightInches, weightLbs); }, []); // eslint-disable-line
 
+  // Central field updater — triggers live recalc after completion
   const handleChange = (field: keyof UserProfile, value: any) => {
-    setProfile(p => ({ ...p, [field]: value }));
+    setProfile(p => {
+      const updated = { ...p, [field]: value };
+      if (isCompleted) onProfileChange?.({ ...updated, dietQuality: computeDietScore(updated) });
+      return updated;
+    });
   };
 
   const handleNext = () => {
-    if (step < TOTAL_STEPS) setStep(s => s + 1);
-    else {
-      // Compute dietQuality before submitting
-      const dietScore = [
-        profile.dietFruit, profile.dietVeg, profile.dietWholeGrains, profile.dietFish, profile.dietDairy,
-        profile.dietOil, profile.dietRefinedGrains, profile.dietProcessedMeat, profile.dietRedMeat, profile.dietSugar,
-      ].filter(Boolean).length;
-      onCalculate({ ...profile, dietQuality: dietScore });
+    if (step < TOTAL_STEPS) {
+      setStep(s => s + 1);
+    } else {
+      onCalculate({ ...profile, dietQuality: computeDietScore(profile) });
     }
   };
 
@@ -883,8 +929,13 @@ export const InputForm: React.FC<InputFormProps> = ({ onCalculate }) => {
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto">
-      <ProgressBar currentStep={step} totalSteps={TOTAL_STEPS} />
+    <div className="w-full">
+      <ProgressBar
+        currentStep={step}
+        totalSteps={TOTAL_STEPS}
+        allCompleted={isCompleted}
+        onStepClick={isCompleted ? setStep : undefined}
+      />
 
       {/* Step content */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-7 mb-6 min-h-[380px]">
@@ -908,7 +959,9 @@ export const InputForm: React.FC<InputFormProps> = ({ onCalculate }) => {
           onClick={handleNext}
           className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 text-white font-bold text-base px-6 py-3.5 rounded-2xl shadow-lg shadow-blue-900/20 transition-all duration-200 active:scale-95"
         >
-          {step < TOTAL_STEPS ? (
+          {isCompleted ? (
+            <>Next <ChevronRight size={18} /></>
+          ) : step < TOTAL_STEPS ? (
             <>Next <ChevronRight size={18} /></>
           ) : (
             <>Calculate My Risk <ChevronRight size={18} /></>
